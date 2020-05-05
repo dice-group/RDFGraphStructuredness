@@ -1,5 +1,5 @@
 from string import Template
-from typing import Set
+from typing import Set, Dict
 import SPARQLWrapper
 
 import click
@@ -21,101 +21,83 @@ def get_iri_set(results: dict, key) -> Set[str]:
 	return {result[key]["value"] for result in results["results"]["bindings"]}
 
 
-def count_type_predicates(endpoint: str, type: str, named_graph: str) -> int:
-	query_string: str = Template("""
-		SELECT DISTINCT (Count(?typePred) AS ?cnt) $named_graph
-		WHERE {
-			?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <$type> .
-			?s ?typePred ?o .
-		}
-		""").substitute(named_graph="From <{}>".format(named_graph) if named_graph is not None else "",
-						type=type)
-
-	results = run_query(endpoint, query_string)
-	return get_count(results, "cnt")  # -1 for rdf:type
-
-
 def get_type_predicates(endpoint: str, type: str, named_graph: str) -> Set[str]:
 	query_string: str = Template("""
 		SELECT DISTINCT ?typePred $named_graph
 		WHERE {
-			?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <$type> .
+			?s a <$type> .
 			?s ?typePred ?o .
+			FILTER (?typePred != <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>)
 		}
-		""").substitute(named_graph="From <{}>".format(named_graph) if named_graph is not None else "",
+		""").substitute(named_graph="FROM <{}>".format(named_graph) if named_graph is not None else "",
 						type=type)
 
 	results = run_query(endpoint, query_string)
-	types = get_iri_set(results, "typePred")
-	types.remove("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
-	return types
+	return get_iri_set(results, "typePred")
 
 
 def get_rdf_types(endpoint: str, named_graph: str) -> Set[str]:
 	query_string: str = Template("""
 	SELECT DISTINCT ?type $named_graph
 	WHERE {
-		?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?type .
+		?s a ?type .
 	}
-	""").substitute(named_graph="From <{}>".format(named_graph) if named_graph is not None else "")
+	""").substitute(named_graph="FROM <{}>".format(named_graph) if named_graph is not None else "")
 
 	results = run_query(endpoint, query_string)
 	types = get_iri_set(results, "type")
 	return types
 
 
-def count_occurrences(endpoint: str, predicate: str, type: str, named_graph: str) -> int:
+def sum_predicates_used_by_typed(endpoint: str, type: str, named_graph: str) -> int:
 	query_string: str = Template("""
-		SELECT (Count(Distinct ?s) as ?occurrences) $named_graph
+		SELECT (COUNT(DISTINCT *) as ?occurrences) $named_graph
 		WHERE {
-			?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <$type> .
-			?s <$predicate> ?o .
+			SELECT DISTINCT ?s ?predicate {
+				?s a <$type> .
+				?s ?predicate [] .
+				FILTER (?predicate != <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>)
+			}
 		}
-		""").substitute(named_graph="From <{}>".format(named_graph) if named_graph is not None else "",
-						type=type,
-						predicate=predicate)
+		""").substitute(named_graph="FROM <{}>".format(named_graph) if named_graph is not None else "",
+						type=type)
 	results = run_query(endpoint, query_string)
 	return get_count(results, "occurrences")
 
 
-def count_type_instances(endpoint: str, type: str, named_graph: str) -> int:
+def count_instances_by_type(endpoint: str, named_graph: str) -> Dict[str, int]:
 	query_string: str = Template("""
-		SELECT (Count(DISTINCT ?s)  as ?cnt) $named_graph
+		SELECT (COUNT(DISTINCT ?s)  as ?cnt) ?type $named_graph
 		WHERE {
-			?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <$type> .
-		}
-		""").substitute(named_graph="From <{}>".format(named_graph) if named_graph is not None else "",
+			?s a ?type .
+			FILTER (?type != <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>)
+		} GROUP BY ?type
+		""").substitute(named_graph="FROM <{}>".format(named_graph) if named_graph is not None else "",
 						type=type)
 	results = run_query(endpoint, query_string)
-	return get_count(results, "cnt")
-
-
-def calc_types_weighted_denom_sum(endpoint: str, types: Set[str], named_graph: str) -> float:
-	sum: int = 0
-
-	for type in types:
-		typeInstancesSize: int = count_type_instances(endpoint, type, named_graph)
-		typePredicatesSize: int = count_type_predicates(endpoint, type, named_graph)
-		sum += typeInstancesSize + typePredicatesSize
-	return sum
+	bindings = results["results"]["bindings"]
+	return {entry["type"]["value"]: int(entry["cnt"]["value"]) for entry in bindings}
 
 
 def get_structuredness_value(endpoint: str, named_graph: str):
 	types: Set[str] = get_rdf_types(endpoint, named_graph)
-	weighted_denom_sum: float = calc_types_weighted_denom_sum(endpoint, types, named_graph)
+	types_predicates: Dict[str, Set[str]] = {type: get_type_predicates(endpoint, type, named_graph) for type in types}
+	types_instances_size: Dict[str, int] = count_instances_by_type(endpoint, named_graph)
+	weighted_denom_sum: float = float(
+		sum(len(predicates) for predicates in types_predicates) +
+		sum(instances_size for instances_size in types_instances_size.values())
+	)
 	structuredness: float = 0
 	for type in types:
-		occurence_sum: int = 0
-		type_predicates: Set[str] = get_type_predicates(endpoint, type, named_graph)
+		type_predicates: Set[str] = types_predicates[type]
 
-		for predicate in type_predicates:
-			occurence_sum += count_occurrences(endpoint, predicate, type, named_graph)
+		occurrences_sum: int = sum_predicates_used_by_typed(endpoint, type, named_graph)
 
-		type_instances_size: int = count_type_instances(endpoint, type, named_graph)
+		type_instances_size: int = types_instances_size[type]
 
-		denom: int = len(type_predicates) * type_instances_size if len(type_predicates) != 0 else 1
+		denom: float = float(len(type_predicates) * type_instances_size if len(type_predicates) != 0 else 1)
 
-		coverage: float = float(occurence_sum) / float(denom)
+		coverage: float = occurrences_sum / denom
 		weighted_coverage: float = (len(type_predicates) + type_instances_size) / weighted_denom_sum
 		structuredness += (coverage * weighted_coverage)
 
