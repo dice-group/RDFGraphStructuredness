@@ -6,3 +6,13 @@ Calculate the structuredness or coherence of a dataset as defined in Duan et al.
 
 ## run 
 
+The tool provides the following commandline options:
+```
+  --endpoint TEXT  Endpoint holding the RDF graph.  [required]
+  --named TEXT     If the named graph is set, only the named graph is
+                   considered.
+
+  --help           Show this message and exit.
+```
+
+If it runs successfully, the output is just the structuredness, nothing else. 
