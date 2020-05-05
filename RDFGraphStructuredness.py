@@ -127,7 +127,7 @@ def get_structuredness_value(endpoint: str, named_graph: str):
 @click.option('--named', default=None, help='If the named graph is set, only the named graph is considered.')
 def cli(endpoint, named):
 	"""
-	Calculate the structuredness or coherence of a dataset as defined in Duan et al. paper titled "Apples and Oranges: A Comparison of RDF Benchmarks and Real RDF Datasets". The structuredness is measured in interval [0,1] with values close to 0 corresponding to low structuredness, and 1 corresponding to perfect structuredness. The paper concluded that synthetic datasets have high structurenes as compared to real datasets.
+	Calculate the structuredness or coherence of an RDF dataset as defined in Duan et al. paper "Apples and Oranges: A Comparison of RDF Benchmarks and Real RDF Datasets". The structuredness is measured in the interval [0,1] with values close to 0 corresponding to low structuredness, and 1 corresponding to perfect structuredness. The paper concluded that synthetic datasets have high structuredness as compared to real datasets.
 	"""
 
 	coherence: float = get_structuredness_value(endpoint, named)
