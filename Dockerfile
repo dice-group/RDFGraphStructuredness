@@ -6,4 +6,4 @@ COPY readme.MD .
 
 RUN pip install .
 
-ENTRYPOINT ["python", "-m", "RDFGraphStructuredness"]
+ENTRYPOINT ["RDFGraphStructuredness"]

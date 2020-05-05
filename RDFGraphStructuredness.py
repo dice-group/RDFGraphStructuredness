@@ -125,7 +125,7 @@ def get_structuredness_value(endpoint: str, named_graph: str):
 @click.command()
 @click.option('--endpoint', required=True, help='Endpoint holding the RDF graph.')
 @click.option('--named', default=None, help='If the named graph is set, only the named graph is considered.')
-def hello(endpoint, named):
+def cli(endpoint, named):
 	"""
 	Calculate the structuredness or coherence of a dataset as defined in Duan et al. paper titled "Apples and Oranges: A Comparison of RDF Benchmarks and Real RDF Datasets". The structuredness is measured in interval [0,1] with values close to 0 corresponding to low structuredness, and 1 corresponding to perfect structuredness. The paper concluded that synthetic datasets have high structurenes as compared to real datasets.
 	"""
@@ -135,4 +135,4 @@ def hello(endpoint, named):
 
 
 if __name__ == '__main__':
-	hello()
+	cli()

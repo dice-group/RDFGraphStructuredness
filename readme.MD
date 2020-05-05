@@ -4,9 +4,28 @@ Calculate the structuredness or coherence of a dataset as defined in Duan et al.
 
 [1] Songyun Duan, Anastasios Kementsietsidis, Kavitha Srinivas, and Octavian Udrea. 2011. Apples and oranges: a comparison of RDF benchmarks and real RDF datasets. In Proceedings of the 2011 ACM SIGMOD International Conference on Management of data (SIGMOD ’11). Association for Computing Machinery, New York, NY, USA, 145–156. DOI:https://doi.org/10.1145/1989323.1989340
 
+## install 
+
+Clone it 
+```shell script
+git clone https://github.com/dice-group/RDFGraphStructuredness.git
+```
+and enter the cloned folder 
+```shell script
+cd RDFGraphStructuredness
+```
+Install it with 
+```shell script
+pip3 install -U .
+```
+
 ## run 
 
-The tool provides the following commandline options:
+Run it with:
+```shell script
+RDFGraphStructuredness.py [OPTIONS]
+```
+The tool provides the following commandline [OPTIONS]:
 ```
   --endpoint TEXT  Endpoint holding the RDF graph.  [required]
   --named TEXT     If the named graph is set, only the named graph is

@@ -17,12 +17,16 @@ setuptools.setup(
 	long_description_content_type="text/markdown",
 	url="https://github.com/dice-group/RDFGraphStructuredness",
 	packages=setuptools.find_packages(),
+	py_modules=['RDFGraphStructuredness'],
 	classifiers=[
 		"Programming Language :: Python :: 3",
 		"Operating System  :: POSIX :: Linux",
 	],
 	python_requires='>=3.6',
-	scripts=['RDFGraphStructuredness.py'],
+	entry_points='''
+		[console_scripts]
+		RDFGraphStructuredness=RDFGraphStructuredness:cli
+	''',
 	install_requires=['sparqlwrapper', 'click']
 
 )
