@@ -1,3 +1,4 @@
+from collections import defaultdict
 from string import Template
 from typing import Set, Dict
 import SPARQLWrapper
@@ -21,19 +22,25 @@ def get_iri_set(results: dict, key) -> Set[str]:
 	return {result[key]["value"] for result in results["results"]["bindings"]}
 
 
-def get_type_predicates(endpoint: str, type: str, named_graph: str) -> Set[str]:
+def get_types_predicates(endpoint: str, named_graph: str) -> Dict[str, Set[str]]:
 	query_string: str = Template("""
-		SELECT DISTINCT ?typePred $named_graph
+		SELECT DISTINCT ?type ?typePred $named_graph
 		WHERE {
-			?s a <$type> .
-			?s ?typePred ?o .
-			FILTER (?typePred != <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>)
+			?s a ?type .
+			OPTIONAL{ ?s ?typePred [] .
+			FILTER (?typePred != <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>) 
+			}
 		}
 		""").substitute(named_graph="FROM <{}>".format(named_graph) if named_graph is not None else "",
 						type=type)
 
 	results = run_query(endpoint, query_string)
-	return get_iri_set(results, "typePred")
+	types_predicates: Dict[str, Set[str]] = defaultdict(set)
+	for binding in results["results"]["bindings"]:
+		type_predicates = types_predicates[binding["type"]["value"]]
+		if "typePred" in binding:
+			type_predicates.add(binding["typePred"]["value"])
+	return types_predicates
 
 
 def get_rdf_types(endpoint: str, named_graph: str) -> Set[str]:
@@ -81,7 +88,7 @@ def count_instances_by_type(endpoint: str, named_graph: str) -> Dict[str, int]:
 
 def get_structuredness_value(endpoint: str, named_graph: str):
 	types: Set[str] = get_rdf_types(endpoint, named_graph)
-	types_predicates: Dict[str, Set[str]] = {type: get_type_predicates(endpoint, type, named_graph) for type in types}
+	types_predicates: Dict[str, Set[str]] = get_types_predicates(endpoint, named_graph)
 	types_instances_size: Dict[str, int] = count_instances_by_type(endpoint, named_graph)
 	weighted_denom_sum: float = float(
 		sum(len(predicates) for predicates in types_predicates) +
