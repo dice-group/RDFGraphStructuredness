@@ -8,7 +8,7 @@ setuptools.setup(
 	version="0.1.0",
 	author="Alexander Bigerl",
 	author_email="bigerl@mail.upb.de",
-	description='Calculate the structuredness or coherence of a RDF dataset.',
+	description='Calculate the structuredness or coherence of an RDF dataset.',
 	long_description=long_description,
 	long_description_content_type="text/markdown",
 	url="https://github.com/dice-group/RDFGraphStructuredness",
